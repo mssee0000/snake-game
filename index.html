@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sejarah Form 1 - 终极音乐手机版</title>
+    <title>Sejarah Form 1 - 学生进度追踪版</title>
     <style>
         :root {
             --primary-color: #ffde59;
@@ -107,12 +107,12 @@
 
     <div id="start-overlay">
         <h1>Sejarah Form 1</h1>
-        <p>准备好成为“蛇王”了吗？</p>
-        <button id="start-btn" onclick="startGame()">开始挑战 (开启音乐) 🎵</button>
+        <p>请输入姓名开始挑战</p>
+        <button id="start-btn" onclick="startGame()">点我开始游戏 🎵</button>
     </div>
 
     <div id="header">
-        <div id="question-text">加载题目中...</div>
+        <div id="question-text">准备中...</div>
         <div id="options-grid">
             <div class="option-box" id="oA">A: </div>
             <div class="option-box" id="oB">B: </div>
@@ -138,20 +138,24 @@
     <div id="win-overlay" style="display:none">
         <div style="background:white; padding:30px; border-radius:20px; color:#333;">
             <h1 style="color:#ff914d; margin:0;">恭喜你！</h1>
-            <p style="font-size:1.2rem; font-weight:bold;">你就是蛇王！🐍👑</p>
+            <p id="win-msg" style="font-size:1.1rem; font-weight:bold;"></p>
+            <p>成绩已自动记录到老师的名单里！🐍👑</p>
             <button onclick="location.reload()" style="padding:10px 25px; background:#4CAF50; color:white; border:none; border-radius:10px; cursor:pointer;">再玩一次</button>
         </div>
     </div>
 
 <script>
-    // --- 强大的音频引擎 ---
+    // --- 1. 数据记录配置 ---
+    const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSebwf6ZBXkb-pX94wedMe2mDDEq0VPxYbBIAvcbLl8t8DaelA/formResponse";
+    const ENTRY_ID = "entry.1362896977";
+    let studentName = "";
+
+    // --- 2. 音频引擎 ---
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    
     function playTone(freq, type, duration, vol) {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-        osc.type = type;
-        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        osc.type = type; osc.frequency.value = freq;
         gain.gain.setValueAtTime(vol, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
         osc.connect(gain); gain.connect(audioCtx.destination);
@@ -159,33 +163,20 @@
     }
 
     const sound = {
-        correct: () => { 
-            playTone(523, 'triangle', 0.3, 0.1); 
-            setTimeout(() => playTone(659, 'triangle', 0.3, 0.1), 100); 
-        },
-        wrong: () => { 
-            playTone(150, 'sawtooth', 0.5, 0.2); 
-            playTone(100, 'sawtooth', 0.5, 0.2); 
-        },
+        correct: () => { playTone(523, 'triangle', 0.3, 0.1); setTimeout(() => playTone(659, 'triangle', 0.3, 0.1), 100); },
+        wrong: () => { playTone(150, 'sawtooth', 0.5, 0.2); playTone(100, 'sawtooth', 0.5, 0.2); },
         move: () => playTone(250, 'sine', 0.05, 0.02),
-        win: () => {
-            [523, 659, 783, 1046].forEach((f, i) => {
-                setTimeout(() => playTone(f, 'square', 0.6, 0.1), i * 150);
-            });
-        }
+        win: () => { [523, 659, 783, 1046].forEach((f, i) => setTimeout(() => playTone(f, 'square', 0.6, 0.1), i * 150)); }
     };
 
     let bgmInterval;
     function startBGM() {
         const notes = [261, 329, 392, 329, 261, 329, 392, 440];
         let i = 0;
-        bgmInterval = setInterval(() => {
-            if(!isPaused) playTone(notes[i % notes.length], 'sine', 0.5, 0.03);
-            i++;
-        }, 450);
+        bgmInterval = setInterval(() => { if(!isPaused) playTone(notes[i % notes.length], 'sine', 0.5, 0.02); i++; }, 450);
     }
 
-    // --- 游戏逻辑 ---
+    // --- 3. 游戏核心 ---
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const grid = 20;
@@ -202,12 +193,13 @@
     let snake=[{x:10*grid, y:10*grid}, {x:9*grid, y:10*grid}], dx=grid, dy=0, foods=[];
 
     function startGame() {
+        studentName = prompt("请输入你的全名 (Full Name):");
+        if (!studentName || studentName.trim() === "") {
+            alert("必须输入姓名才能开始游戏哦！");
+            return;
+        }
         document.getElementById('start-overlay').style.display='none';
-        isPaused=false;
-        audioCtx.resume();
-        startBGM();
-        initQuiz();
-        gameTick();
+        isPaused=false; audioCtx.resume(); startBGM(); initQuiz(); gameTick();
     }
 
     function initQuiz() {
@@ -232,8 +224,7 @@
     }
 
     function changeDir(dir) {
-        if(isPaused) return;
-        sound.move();
+        if(isPaused) return; sound.move();
         if(dir==='up' && dy===0) {dx=0; dy=-grid;}
         else if(dir==='down' && dy===0) {dx=0; dy=grid;}
         else if(dir==='left' && dx===0) {dx=-grid; dy=0;}
@@ -241,71 +232,69 @@
     }
 
     window.addEventListener('keydown', e => {
-        if(e.key==='ArrowUp') changeDir('up');
-        if(e.key==='ArrowDown') changeDir('down');
-        if(e.key==='ArrowLeft') changeDir('left');
-        if(e.key==='ArrowRight') changeDir('right');
+        if(e.key==='ArrowUp') changeDir('up'); if(e.key==='ArrowDown') changeDir('down');
+        if(e.key==='ArrowLeft') changeDir('left'); if(e.key==='ArrowRight') changeDir('right');
     });
 
     function gameTick() {
         if(!isPaused) {
             let headX = snake[0].x + dx, headY = snake[0].y + dy;
-            // 穿墙
             if(headX<0) headX=canvas.width-grid; else if(headX>=canvas.width) headX=0;
             if(headY<0) headY=canvas.height-grid; else if(headY>=canvas.height) headY=0;
-
             const newHead = {x:headX, y:headY};
-            
-            // 撞身体检测
-            if(snake.some(s => s.x === newHead.x && s.y === newHead.y)) {
-                snake = [newHead]; // 简化蛇身
-            }
-            
+            if(snake.some(s => s.x === newHead.x && s.y === newHead.y)) snake = [newHead];
             snake.unshift(newHead);
-
             let ate = false;
             foods.forEach(f => {
                 if(newHead.x===f.x && newHead.y===f.y) {
                     ate=true;
                     if(f.label === quizData[currentIdx].ans) {
                         sound.correct(); currentIdx++;
-                        if(currentIdx>=5) { 
-                            isPaused=true; 
-                            clearInterval(bgmInterval);
-                            sound.win();
-                            document.getElementById('win-overlay').style.display='flex';
-                            createConfetti();
-                        } else initQuiz();
+                        if(currentIdx>=5) handleWin(); else initQuiz();
                     } else {
-                        sound.wrong(); hearts--; 
-                        document.getElementById('hearts').innerText="❤️".repeat(hearts);
-                        if(hearts<=0) { alert("生命值耗尽，加油！"); location.reload(); }
-                        else { alert("选错啦！扣除一颗心 ❤️"); snake.pop(); spawnFoods(); }
+                        sound.wrong(); hearts--; document.getElementById('hearts').innerText="❤️".repeat(hearts);
+                        if(hearts<=0) { alert("Game Over! 再试一次吧！"); location.reload(); }
+                        else { alert("答错了！扣一颗心 ❤️"); snake.pop(); spawnFoods(); }
                     }
                 }
             });
-            if(!ate) snake.pop();
-            render();
+            if(!ate) snake.pop(); render();
         }
         setTimeout(gameTick, 180);
     }
 
     function render() {
         ctx.clearRect(0,0,canvas.width,canvas.height);
-        // 背景格
         ctx.strokeStyle="#f0f0f0";
         for(let i=0; i<400; i+=20) { ctx.strokeRect(i,0,0.5,400); ctx.strokeRect(0,i,400,0.5); }
-        // 食物
         foods.forEach(f => {
             ctx.fillStyle="#3498db"; ctx.beginPath(); ctx.roundRect(f.x+2, f.y+2, 16, 16, 4); ctx.fill();
-            ctx.fillStyle="white"; ctx.font="bold 12px Arial"; ctx.textAlign="center";
-            ctx.fillText(f.label, f.x+10, f.y+14);
+            ctx.fillStyle="white"; ctx.font="bold 12px Arial"; ctx.textAlign="center"; ctx.fillText(f.label, f.x+10, f.y+14);
         });
-        // 蛇
         snake.forEach((p,i) => {
             ctx.fillStyle = (i===0)?"#2E7D32":"#81C784";
             ctx.beginPath(); ctx.roundRect(p.x+1, p.y+1, 18, 18, 4); ctx.fill();
         });
+    }
+
+    // --- 4. 胜利及名单提交 ---
+    function handleWin() {
+        isPaused = true;
+        clearInterval(bgmInterval);
+        sound.win();
+        document.getElementById('win-msg').innerText = studentName + "，你成功通关了！";
+        document.getElementById('win-overlay').style.display='flex';
+        createConfetti();
+        
+        // 发送数据到 Google Forms
+        const formData = new FormData();
+        formData.append(ENTRY_ID, studentName);
+        
+        fetch(FORM_URL, {
+            method: "POST",
+            mode: "no-cors",
+            body: formData
+        }).then(() => console.log("Success")).catch(e => console.error(e));
     }
 
     function createConfetti() {
