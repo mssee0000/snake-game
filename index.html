@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sejarah Form 1 - 贪吃蛇挑战 (穿墙版)</title>
+    <style>
+        :root {
+            --primary-color: #ffde59;
+            --snake-head: #2E7D32;
+            --snake-body: #81C784;
+            --food-color: #3498db; 
+            --bg-color: #f0f2f5;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        /* 题目区域 */
+        #quiz-container {
+            width: 100%;
+            max-width: 600px;
+            background: white;
+            padding: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            text-align: center;
+            border-bottom: 5px solid var(--primary-color);
+        }
+
+        #question {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            min-height: 3em;
+        }
+
+        #options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            font-size: 0.9rem;
+        }
+
+        .option-item {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        /* 统计与游戏区 */
+        #stats {
+            display: flex;
+            justify-content: space-between;
+            width: 400px;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        #game-area {
+            position: relative;
+            margin-top: 10px;
+        }
+
+        canvas {
+            background-color: #fff;
+            border: 8px solid #5d4037;
+            border-radius: 10px;
+        }
+
+        /* 胜利大弹窗 */
+        #overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: white;
+        }
+
+        #victory-box {
+            background: white;
+            color: #333;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            border: 5px solid var(--primary-color);
+            transform: scale(0);
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        #victory-box.show { transform: scale(1); }
+        h1 { color: #e91e63; font-size: 2.5rem; }
+
+        .confetti {
+            position: absolute;
+            width: 10px; height: 10px;
+            animation: fall 3s linear infinite;
+        }
+
+        @keyframes fall {
+            to { transform: translateY(100vh) rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="quiz-container">
+        <div id="question">准备中...</div>
+        <div id="options">
+            <div class="option-item" id="optA">A: </div>
+            <div class="option-item" id="optB">B: </div>
+            <div class="option-item" id="optC">C: </div>
+            <div class="option-item" id="optD">D: </div>
+        </div>
+    </div>
+
+    <div id="stats">
+        <span>题目: <span id="progress">1</span>/5</span>
+        <span id="lives">生命值: ❤️❤️❤️</span>
+    </div>
+
+    <div id="game-area">
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+    </div>
+
+    <div id="overlay">
+        <div id="victory-box">
+            <h1>恭喜你！</h1>
+            <p style="font-size: 1.5rem; margin: 20px 0;">你就是蛇王！🐍👑</p>
+            <button onclick="location.reload()" style="padding: 10px 20px; font-size: 1rem; cursor:pointer; background: #4CAF50; color: white; border: none; border-radius: 5px;">重新开始</button>
+        </div>
+    </div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const grid = 20;
+    
+    const questions = [
+        {}, 
+        { q: "1. 谁是马六甲王朝的开国君主？", options: {A:"苏丹满速沙", B:"拜里米苏拉", C:"苏丹阿都沙", D:"敦霹雳"}, ans: "B" },
+        { q: "2. 以下哪个是古代马来群岛最早的文明王国？", options: {A:"室利佛逝王国", B:"满者伯夷王国", C:"狼牙修王国", D:"三佛齐王国"}, ans: "C" },
+        { q: "3. 马六甲王朝能够繁荣的主要原因是什么？", options: {A:"盛产黄金", B:"地理位置位于海上贸易要道", C:"土地肥沃适合农耕", D:"拥有大量金矿"}, ans: "B" },
+        { q: "4. 在马来传统社会中，人民主要的经济活动是什么？", options: {A:"工业制造", B:"航海与贸易", C:"种植与捕鱼", D:"开采石油"}, ans: "C" },
+        { q: "5. 敦霹雳在马六甲王朝担任什么重要职位？", options: {A:"苏丹", B:"宰相", C:"海军司令", D:"宗教长老"}, ans: "B" }
+    ];
+
+    let currentQ = 1;
+    let lives = 3;
+    let snake = [{x: 10 * grid, y: 10 * grid}, {x: 9 * grid, y: 10 * grid}];
+    let dx = grid;
+    let dy = 0;
+    let foods = [];
+    let gameRunning = true;
+
+    function updateQuiz() {
+        if (currentQ > 5) {
+            showVictory();
+            return;
+        }
+        const data = questions[currentQ];
+        document.getElementById('question').innerText = data.q;
+        document.getElementById('optA').innerText = "A: " + data.options.A;
+        document.getElementById('optB').innerText = "B: " + data.options.B;
+        document.getElementById('optC').innerText = "C: " + data.options.C;
+        document.getElementById('optD').innerText = "D: " + data.options.D;
+        document.getElementById('progress').innerText = currentQ;
+        spawnFoods();
+    }
+
+    function spawnFoods() {
+        foods = [];
+        const labels = ['A', 'B', 'C', 'D'];
+        labels.forEach(label => {
+            let newPos;
+            while (true) {
+                newPos = {
+                    x: Math.floor(Math.random() * (canvas.width / grid)) * grid,
+                    y: Math.floor(Math.random() * (canvas.height / grid)) * grid,
+                    label: label
+                };
+                const onSnake = snake.some(s => s.x === newPos.x && s.y === newPos.y);
+                const onFood = foods.some(f => f.x === newPos.x && f.y === newPos.y);
+                if (!onSnake && !onFood) break;
+            }
+            foods.push(newPos);
+        });
+    }
+
+    function draw() {
+        if (!gameRunning) return;
+
+        // 计算新头部位置
+        let nextX = snake[0].x + dx;
+        let nextY = snake[0].y + dy;
+
+        // 【核心修改：穿墙逻辑】
+        if (nextX < 0) nextX = canvas.width - grid;
+        else if (nextX >= canvas.width) nextX = 0;
+        
+        if (nextY < 0) nextY = canvas.height - grid;
+        else if (nextY >= canvas.height) nextY = 0;
+
+        const head = {x: nextX, y: nextY};
+        
+        // 只有撞到自己才会死
+        if (snake.some(s => s.x === head.x && s.y === head.y)) {
+            gameOver("小心！不要撞到自己的身体！");
+            return;
+        }
+
+        snake.unshift(head);
+
+        let ate = false;
+        foods.forEach((food) => {
+            if (head.x === food.x && head.y === food.y) {
+                ate = true;
+                handleEating(food.label);
+            }
+        });
+
+        if (!ate) snake.pop();
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 画网格
+        ctx.strokeStyle = "#f0f0f0";
+        for(let i=0; i<=canvas.width; i+=grid) {
+            ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,canvas.height); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(canvas.width,i); ctx.stroke();
+        }
+
+        // 画食物 (颜色统一)
+        foods.forEach(food => {
+            ctx.fillStyle = "#3498db";
+            ctx.beginPath();
+            ctx.roundRect(food.x+2, food.y+2, grid-4, grid-4, 4);
+            ctx.fill();
+            ctx.fillStyle = "white";
+            ctx.font = "bold 14px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(food.label, food.x + grid/2, food.y + 15);
+        });
+
+        // 画蛇
+        snake.forEach((part, i) => {
+            ctx.fillStyle = i === 0 ? "#2E7D32" : "#81C784";
+            ctx.beginPath();
+            ctx.roundRect(part.x+1, part.y+1, grid-2, grid-2, 4);
+            ctx.fill();
+        });
+    }
+
+    function handleEating(label) {
+        if (label === questions[currentQ].ans) {
+            currentQ++;
+            if (currentQ <= 5) {
+                updateQuiz();
+            } else {
+                showVictory();
+            }
+        } else {
+            lives--;
+            updateLivesUI();
+            if (lives <= 0) {
+                gameOver("生命值用光了！");
+            } else {
+                alert("答错了！那是错误答案。请再想一想！");
+                snake.pop(); // 吃错不长身体
+                spawnFoods(); 
+            }
+        }
+    }
+
+    function updateLivesUI() {
+        document.getElementById('lives').innerText = "生命值: " + "❤️".repeat(lives);
+    }
+
+    function gameOver(msg) {
+        gameRunning = false;
+        alert(msg);
+        location.reload();
+    }
+
+    function showVictory() {
+        gameRunning = false;
+        const overlay = document.getElementById('overlay');
+        overlay.style.display = 'flex';
+        setTimeout(() => {
+            document.getElementById('victory-box').classList.add('show');
+            createConfetti();
+        }, 100);
+    }
+
+    function createConfetti() {
+        const colors = ['#f1c40f', '#e74c3c', '#9b59b6', '#2ecc71', '#3498db'];
+        for(let i=0; i<80; i++) {
+            const c = document.createElement('div');
+            c.className = 'confetti';
+            c.style.left = Math.random() * 100 + 'vw';
+            c.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            c.style.animationDelay = Math.random() * 3 + 's';
+            document.getElementById('overlay').appendChild(c);
+        }
+    }
+
+    window.addEventListener('keydown', e => {
+        switch(e.key) {
+            case 'ArrowUp': if (dy === 0) { dx = 0; dy = -grid; } break;
+            case 'ArrowDown': if (dy === 0) { dx = 0; dy = grid; } break;
+            case 'ArrowLeft': if (dx === 0) { dx = -grid; dy = 0; } break;
+            case 'ArrowRight': if (dx === 0) { dx = grid; dy = 0; } break;
+        }
+    });
+
+    updateQuiz();
+    setInterval(draw, 140); // 稍微加快了一点点流畅度
+</script>
+</body>
+</html>
