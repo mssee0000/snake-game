@@ -2,12 +2,13 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sejarah Form 1 - 音乐挑战版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sejarah Form 1 - 终极音乐手机版</title>
     <style>
         :root {
             --primary-color: #ffde59;
             --food-color: #3498db;
+            --snake-head: #2E7D32;
             --snake-body: #81C784;
             --bg-color: #f7f9fc;
         }
@@ -19,86 +20,99 @@
             flex-direction: column;
             align-items: center;
             margin: 0;
+            padding: 0;
             overflow: hidden;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
         #header {
             width: 100%; max-width: 500px;
-            background: white; padding: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            border-bottom: 6px solid var(--primary-color);
+            background: white; padding: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-bottom: 4px solid var(--primary-color);
             text-align: center;
         }
 
         #question-text {
-            font-size: 1.1rem; font-weight: bold; color: #2c3e50;
-            margin-bottom: 12px; height: 50px;
+            font-size: 1rem; font-weight: bold; color: #2c3e50;
+            margin-bottom: 8px; min-height: 45px;
             display: flex; align-items: center; justify-content: center;
+            padding: 0 10px;
         }
 
-        #options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        #options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 0 10px; }
 
         .option-box {
-            background: #f1f3f5; padding: 6px 10px;
-            border-radius: 6px; font-size: 0.85rem;
+            background: #f1f3f5; padding: 5px 8px;
+            border-radius: 6px; font-size: 0.75rem;
             border: 1px solid #dee2e6; text-align: left;
         }
 
         #info-bar {
-            width: 400px; display: flex; justify-content: space-between;
-            padding: 10px 0; font-weight: bold; color: #5d4037;
+            width: 90%; max-width: 400px; display: flex; justify-content: space-between;
+            padding: 8px 0; font-weight: bold; font-size: 0.9rem;
         }
 
         canvas {
-            background-color: #fff; border: 6px solid #5d4037;
-            border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            background-color: #fff; border: 5px solid #5d4037;
+            border-radius: 12px; max-width: 95vw; max-height: 35vh;
         }
 
-        /* 初始开始界面 */
-        #start-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); z-index: 200;
+        /* 手机按键 */
+        #controls {
+            display: grid;
+            grid-template-areas: 
+                ". up ."
+                "left . right"
+                ". down .";
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .btn {
+            width: 55px; height: 55px;
+            background: rgba(255, 222, 89, 0.7);
+            border: 2px solid #5d4037;
+            border-radius: 12px;
             display: flex; justify-content: center; align-items: center;
+            font-size: 22px; cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .btn:active { background: var(--primary-color); transform: scale(0.9); }
+        #up { grid-area: up; } #down { grid-area: down; }
+        #left { grid-area: left; } #right { grid-area: right; }
+
+        /* 弹窗 */
+        #start-overlay, #win-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); z-index: 200;
+            display: flex; justify-content: center; align-items: center; flex-direction: column;
+            color: white; text-align: center;
         }
 
         #start-btn {
-            padding: 20px 40px; font-size: 1.5rem; cursor: pointer;
+            padding: 15px 40px; font-size: 1.2rem; cursor: pointer;
             background: var(--primary-color); border: none; border-radius: 50px;
-            font-weight: bold; transition: 0.3s;
+            font-weight: bold; margin-top: 20px;
         }
 
-        #start-btn:hover { transform: scale(1.1); }
-
-        /* 胜利大弹窗 */
-        #win-overlay {
-            display: none; position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9); z-index: 100;
-            justify-content: center; align-items: center; flex-direction: column;
-        }
-
-        #win-box {
-            background: white; padding: 40px; border-radius: 30px;
-            text-align: center; border: 8px solid var(--primary-color);
-        }
-
-        .confetti {
-            position: absolute; width: 10px; height: 10px;
-            animation: fall 3s linear infinite;
-        }
-
+        .confetti { position: absolute; width: 8px; height: 8px; animation: fall 3s linear infinite; }
         @keyframes fall { to { transform: translateY(100vh) rotate(360deg); } }
     </style>
 </head>
 <body>
 
-    <!-- 必须点击后才能播放音乐（浏览器安全策略） -->
     <div id="start-overlay">
-        <button id="start-btn" onclick="startGame()">点击开始游戏 (开启音乐) 🎵</button>
+        <h1>Sejarah Form 1</h1>
+        <p>准备好成为“蛇王”了吗？</p>
+        <button id="start-btn" onclick="startGame()">开始挑战 (开启音乐) 🎵</button>
     </div>
 
     <div id="header">
-        <div id="question-text">准备挑战历史了吗？</div>
+        <div id="question-text">加载题目中...</div>
         <div id="options-grid">
             <div class="option-box" id="oA">A: </div>
             <div class="option-box" id="oB">B: </div>
@@ -108,173 +122,193 @@
     </div>
 
     <div id="info-bar">
-        <span>关卡: <span id="curQ">1</span> / 5</span>
+        <span>进度: <span id="curQ">1</span>/5</span>
         <span id="hearts">❤️❤️❤️</span>
     </div>
 
     <canvas id="gameCanvas" width="400" height="400"></canvas>
 
-    <div id="win-overlay">
-        <div id="win-box">
-            <h1 style="color: #ff914d; font-size: 2.5rem; margin: 0;">恭喜你！</h1>
-            <h2 style="color: #333;">你就是蛇王！🐍👑</h2>
-            <p>Sejarah 难不倒你！</p>
-            <button onclick="location.reload()" style="background:#4CAF50; color:white; border:none; padding:10px 20px; border-radius:10px; cursor:pointer;">重新开始</button>
+    <div id="controls">
+        <div class="btn" id="up" ontouchstart="changeDir('up')" onmousedown="changeDir('up')">▲</div>
+        <div class="btn" id="left" ontouchstart="changeDir('left')" onmousedown="changeDir('left')">◀</div>
+        <div class="btn" id="right" ontouchstart="changeDir('right')" onmousedown="changeDir('right')">▶</div>
+        <div class="btn" id="down" ontouchstart="changeDir('down')" onmousedown="changeDir('down')">▼</div>
+    </div>
+
+    <div id="win-overlay" style="display:none">
+        <div style="background:white; padding:30px; border-radius:20px; color:#333;">
+            <h1 style="color:#ff914d; margin:0;">恭喜你！</h1>
+            <p style="font-size:1.2rem; font-weight:bold;">你就是蛇王！🐍👑</p>
+            <button onclick="location.reload()" style="padding:10px 25px; background:#4CAF50; color:white; border:none; border-radius:10px; cursor:pointer;">再玩一次</button>
         </div>
     </div>
 
 <script>
-    // --- 音频引擎 (Web Audio API) ---
+    // --- 强大的音频引擎 ---
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     
-    function playTone(freq, type, duration, volume = 0.1) {
+    function playTone(freq, type, duration, vol) {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = type;
         osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-        gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + duration);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + duration);
     }
 
-    // 各种音效
-    const soundEffect = {
-        correct: () => {
-            playTone(523.25, 'triangle', 0.3); // C5
-            setTimeout(() => playTone(659.25, 'triangle', 0.3), 100); // E5
+    const sound = {
+        correct: () => { 
+            playTone(523, 'triangle', 0.3, 0.1); 
+            setTimeout(() => playTone(659, 'triangle', 0.3, 0.1), 100); 
         },
-        wrong: () => {
-            playTone(200, 'sawtooth', 0.4, 0.2);
-            playTone(150, 'sawtooth', 0.4, 0.2);
+        wrong: () => { 
+            playTone(150, 'sawtooth', 0.5, 0.2); 
+            playTone(100, 'sawtooth', 0.5, 0.2); 
         },
-        move: () => playTone(150, 'sine', 0.05, 0.05),
+        move: () => playTone(250, 'sine', 0.05, 0.02),
         win: () => {
-            const notes = [523, 659, 783, 1046];
-            notes.forEach((n, i) => setTimeout(() => playTone(n, 'square', 0.5), i * 150));
+            [523, 659, 783, 1046].forEach((f, i) => {
+                setTimeout(() => playTone(f, 'square', 0.6, 0.1), i * 150);
+            });
         }
     };
 
-    // 背景音乐合成器
     let bgmInterval;
     function startBGM() {
-        const melody = [261, 329, 392, 329, 261, 329, 392, 440]; // 欢快的循环
-        let step = 0;
+        const notes = [261, 329, 392, 329, 261, 329, 392, 440];
+        let i = 0;
         bgmInterval = setInterval(() => {
-            if(!isPaused) playTone(melody[step % melody.length], 'sine', 0.4, 0.03);
-            step++;
-        }, 400);
+            if(!isPaused) playTone(notes[i % notes.length], 'sine', 0.5, 0.03);
+            i++;
+        }, 450);
     }
 
     // --- 游戏逻辑 ---
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const grid = 20;
-    
+
     const quizData = [
-        { q: "谁是马六甲王朝的开国君主？", a:"苏丹满速沙", b:"拜里米苏拉", c:"苏丹阿都沙", d:"敦霹雳", ans: "B" },
-        { q: "以下哪个是古代马来群岛最早的文明王国？", a:"室利佛逝王国", b:"满者伯夷王国", c:"狼牙修王国", d:"三佛齐王国", ans: "C" },
-        { q: "马六甲王朝能够繁荣的主要原因是什么？", a:"盛产黄金", b:"地理位置位于贸易要道", c:"土地肥沃适合农耕", d:"拥有大量金矿", ans: "B" },
-        { q: "在马来传统社会中，人民主要的经济活动是什么？", a:"工业制造", b:"航海与贸易", c:"种植与捕鱼", d:"开采石油", ans: "C" },
-        { q: "敦霹雳在马六甲王朝担任什么重要职位？", a:"苏丹", b:"宰相", c:"海军司令", d:"宗教长老", ans: "B" }
+        { q: "1. 谁是马六甲王朝的开国君主？", a:"苏丹满速沙", b:"拜里米苏拉", c:"苏丹阿都沙", d:"敦霹雳", ans: "B" },
+        { q: "2. 以下哪个是古代马来群岛最早的文明王国？", a:"室利佛逝王国", b:"满者伯夷王国", c:"狼牙修王国", d:"三佛齐王国", ans: "C" },
+        { q: "3. 马六甲王朝能够繁荣的主要原因是什么？", a:"盛产黄金", b:"地理位置位于贸易要道", c:"土地肥沃适合农耕", d:"拥有大量金矿", ans: "B" },
+        { q: "4. 在马来传统社会中，人民主要的经济活动是什么？", a:"工业制造", b:"航海与贸易", c:"种植与捕鱼", d:"开采石油", ans: "C" },
+        { q: "5. 敦霹雳在马六甲王朝担任什么职位？", a:"苏丹", b:"宰相", c:"海军司令", d:"宗教长老", ans: "B" }
     ];
 
-    let currentIdx = 0, hearts = 3, isPaused = true;
-    let snake = [{x: 10*grid, y: 10*grid}, {x: 9*grid, y: 10*grid}];
-    let dx = grid, dy = 0, foods = [];
+    let currentIdx=0, hearts=3, isPaused=true;
+    let snake=[{x:10*grid, y:10*grid}, {x:9*grid, y:10*grid}], dx=grid, dy=0, foods=[];
 
     function startGame() {
-        document.getElementById('start-overlay').style.display = 'none';
-        isPaused = false;
+        document.getElementById('start-overlay').style.display='none';
+        isPaused=false;
         audioCtx.resume();
         startBGM();
         initQuiz();
-        setInterval(gameLoop, 160);
+        gameTick();
     }
 
     function initQuiz() {
-        const data = quizData[currentIdx];
-        document.getElementById('question-text').innerText = data.q;
-        document.getElementById('oA').innerText = "A: " + data.a;
-        document.getElementById('oB').innerText = "B: " + data.b;
-        document.getElementById('oC').innerText = "C: " + data.c;
-        document.getElementById('oD').innerText = "D: " + data.d;
-        document.getElementById('curQ').innerText = currentIdx + 1;
+        const d = quizData[currentIdx];
+        document.getElementById('question-text').innerText = d.q;
+        document.getElementById('oA').innerText = "A: "+d.a; document.getElementById('oB').innerText = "B: "+d.b;
+        document.getElementById('oC').innerText = "C: "+d.c; document.getElementById('oD').innerText = "D: "+d.d;
+        document.getElementById('curQ').innerText = currentIdx+1;
         spawnFoods();
     }
 
     function spawnFoods() {
         foods = [];
-        ['A', 'B', 'C', 'D'].forEach(label => {
-            let pos;
+        ['A','B','C','D'].forEach(l => {
+            let p;
             while(true) {
-                pos = { x: Math.floor(Math.random()*20)*grid, y: Math.floor(Math.random()*20)*grid, label: label };
-                if(!snake.some(s=>s.x===pos.x && s.y===pos.y) && !foods.some(f=>f.x===pos.x)) break;
+                p = {x:Math.floor(Math.random()*20)*grid, y:Math.floor(Math.random()*20)*grid, label:l};
+                if(!snake.some(s=>s.x===p.x && s.y===p.y) && !foods.some(f=>f.x===p.x)) break;
             }
-            foods.push(pos);
+            foods.push(p);
         });
     }
 
-    function gameLoop() {
+    function changeDir(dir) {
         if(isPaused) return;
+        sound.move();
+        if(dir==='up' && dy===0) {dx=0; dy=-grid;}
+        else if(dir==='down' && dy===0) {dx=0; dy=grid;}
+        else if(dir==='left' && dx===0) {dx=-grid; dy=0;}
+        else if(dir==='right' && dx===0) {dx=grid; dy=0;}
+    }
 
-        let headX = snake[0].x + dx, headY = snake[0].y + dy;
-        if (headX < 0) headX = canvas.width - grid; else if (headX >= canvas.width) headX = 0;
-        if (headY < 0) headY = canvas.height - grid; else if (headY >= canvas.height) headY = 0;
+    window.addEventListener('keydown', e => {
+        if(e.key==='ArrowUp') changeDir('up');
+        if(e.key==='ArrowDown') changeDir('down');
+        if(e.key==='ArrowLeft') changeDir('left');
+        if(e.key==='ArrowRight') changeDir('right');
+    });
 
-        const newHead = {x: headX, y: headY};
-        if(snake.some(s => s.x === newHead.x && s.y === newHead.y)) {
-            snake = [newHead, {x: newHead.x-dx, y: newHead.y-dy}];
-        }
-        snake.unshift(newHead);
+    function gameTick() {
+        if(!isPaused) {
+            let headX = snake[0].x + dx, headY = snake[0].y + dy;
+            // 穿墙
+            if(headX<0) headX=canvas.width-grid; else if(headX>=canvas.width) headX=0;
+            if(headY<0) headY=canvas.height-grid; else if(headY>=canvas.height) headY=0;
 
-        let ate = false;
-        foods.forEach(f => {
-            if(newHead.x === f.x && newHead.y === f.y) {
-                ate = true;
-                if(f.label === quizData[currentIdx].ans) {
-                    soundEffect.correct();
-                    currentIdx++;
-                    if(currentIdx >= 5) win(); else initQuiz();
-                } else {
-                    soundEffect.wrong();
-                    hearts--;
-                    updateHearts();
-                    if(hearts <= 0) { alert("Game Over!"); location.reload(); }
-                    else { alert("答错了！扣一颗心 ❤️"); snake.pop(); spawnFoods(); }
-                }
+            const newHead = {x:headX, y:headY};
+            
+            // 撞身体检测
+            if(snake.some(s => s.x === newHead.x && s.y === newHead.y)) {
+                snake = [newHead]; // 简化蛇身
             }
-        });
-        if(!ate) snake.pop();
-        render();
+            
+            snake.unshift(newHead);
+
+            let ate = false;
+            foods.forEach(f => {
+                if(newHead.x===f.x && newHead.y===f.y) {
+                    ate=true;
+                    if(f.label === quizData[currentIdx].ans) {
+                        sound.correct(); currentIdx++;
+                        if(currentIdx>=5) { 
+                            isPaused=true; 
+                            clearInterval(bgmInterval);
+                            sound.win();
+                            document.getElementById('win-overlay').style.display='flex';
+                            createConfetti();
+                        } else initQuiz();
+                    } else {
+                        sound.wrong(); hearts--; 
+                        document.getElementById('hearts').innerText="❤️".repeat(hearts);
+                        if(hearts<=0) { alert("生命值耗尽，加油！"); location.reload(); }
+                        else { alert("选错啦！扣除一颗心 ❤️"); snake.pop(); spawnFoods(); }
+                    }
+                }
+            });
+            if(!ate) snake.pop();
+            render();
+        }
+        setTimeout(gameTick, 180);
     }
 
     function render() {
         ctx.clearRect(0,0,canvas.width,canvas.height);
-        ctx.strokeStyle = "#eee";
-        for(let i=0; i<400; i+=20) { ctx.strokeRect(i, 0, 0.5, 400); ctx.strokeRect(0, i, 400, 0.5); }
+        // 背景格
+        ctx.strokeStyle="#f0f0f0";
+        for(let i=0; i<400; i+=20) { ctx.strokeRect(i,0,0.5,400); ctx.strokeRect(0,i,400,0.5); }
+        // 食物
         foods.forEach(f => {
-            ctx.fillStyle = varColor('--food-color');
-            ctx.beginPath(); ctx.roundRect(f.x+2, f.y+2, 16, 16, 4); ctx.fill();
-            ctx.fillStyle = "white"; ctx.font = "bold 12px Arial"; ctx.textAlign="center";
+            ctx.fillStyle="#3498db"; ctx.beginPath(); ctx.roundRect(f.x+2, f.y+2, 16, 16, 4); ctx.fill();
+            ctx.fillStyle="white"; ctx.font="bold 12px Arial"; ctx.textAlign="center";
             ctx.fillText(f.label, f.x+10, f.y+14);
         });
-        snake.forEach((p, i) => {
-            ctx.fillStyle = (i===0) ? "#2E7D32" : "#81C784";
+        // 蛇
+        snake.forEach((p,i) => {
+            ctx.fillStyle = (i===0)?"#2E7D32":"#81C784";
             ctx.beginPath(); ctx.roundRect(p.x+1, p.y+1, 18, 18, 4); ctx.fill();
         });
     }
 
-    function varColor(name) { return getComputedStyle(document.documentElement).getPropertyValue(name); }
-    function updateHearts() { document.getElementById('hearts').innerText = "❤️".repeat(hearts); }
-
-    function win() {
-        isPaused = true;
-        clearInterval(bgmInterval);
-        soundEffect.win();
-        document.getElementById('win-overlay').style.display = 'flex';
+    function createConfetti() {
         for(let i=0; i<80; i++) {
             const c = document.createElement('div');
             c.className = 'confetti';
@@ -284,15 +318,6 @@
             document.body.appendChild(c);
         }
     }
-
-    window.addEventListener('keydown', e => {
-        if(isPaused) return;
-        soundEffect.move();
-        if(e.key === 'ArrowUp' && dy === 0) { dx = 0; dy = -grid; }
-        else if(e.key === 'ArrowDown' && dy === 0) { dx = 0; dy = grid; }
-        else if(e.key === 'ArrowLeft' && dx === 0) { dx = -grid; dy = 0; }
-        else if(e.key === 'ArrowRight' && dx === 0) { dx = grid; dy = 0; }
-    });
 </script>
 </body>
 </html>
