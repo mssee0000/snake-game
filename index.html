@@ -3,18 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sejarah Form 1 - 贪吃蛇挑战 (穿墙版)</title>
+    <title>Sejarah Form 1 - 音乐挑战版</title>
     <style>
         :root {
             --primary-color: #ffde59;
-            --snake-head: #2E7D32;
+            --food-color: #3498db;
             --snake-body: #81C784;
-            --food-color: #3498db; 
-            --bg-color: #f0f2f5;
+            --bg-color: #f7f9fc;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Comic Sans MS', 'Segoe UI', sans-serif;
             background-color: var(--bg-color);
             display: flex;
             flex-direction: column;
@@ -23,311 +22,277 @@
             overflow: hidden;
         }
 
-        /* 题目区域 */
-        #quiz-container {
-            width: 100%;
-            max-width: 600px;
-            background: white;
-            padding: 20px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        #header {
+            width: 100%; max-width: 500px;
+            background: white; padding: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-bottom: 6px solid var(--primary-color);
             text-align: center;
-            border-bottom: 5px solid var(--primary-color);
         }
 
-        #question {
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 15px;
-            min-height: 3em;
+        #question-text {
+            font-size: 1.1rem; font-weight: bold; color: #2c3e50;
+            margin-bottom: 12px; height: 50px;
+            display: flex; align-items: center; justify-content: center;
         }
 
-        #options {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            font-size: 0.9rem;
+        #options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+        .option-box {
+            background: #f1f3f5; padding: 6px 10px;
+            border-radius: 6px; font-size: 0.85rem;
+            border: 1px solid #dee2e6; text-align: left;
         }
 
-        .option-item {
-            background: #f8f9fa;
-            padding: 8px;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-            text-align: left;
-        }
-
-        /* 统计与游戏区 */
-        #stats {
-            display: flex;
-            justify-content: space-between;
-            width: 400px;
-            margin-top: 10px;
-            font-weight: bold;
-        }
-
-        #game-area {
-            position: relative;
-            margin-top: 10px;
+        #info-bar {
+            width: 400px; display: flex; justify-content: space-between;
+            padding: 10px 0; font-weight: bold; color: #5d4037;
         }
 
         canvas {
-            background-color: #fff;
-            border: 8px solid #5d4037;
-            border-radius: 10px;
+            background-color: #fff; border: 6px solid #5d4037;
+            border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15);
         }
+
+        /* 初始开始界面 */
+        #start-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); z-index: 200;
+            display: flex; justify-content: center; align-items: center;
+        }
+
+        #start-btn {
+            padding: 20px 40px; font-size: 1.5rem; cursor: pointer;
+            background: var(--primary-color); border: none; border-radius: 50px;
+            font-weight: bold; transition: 0.3s;
+        }
+
+        #start-btn:hover { transform: scale(1.1); }
 
         /* 胜利大弹窗 */
-        #overlay {
-            display: none;
-            position: fixed;
+        #win-overlay {
+            display: none; position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85);
-            z-index: 100;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            color: white;
+            background: rgba(0,0,0,0.9); z-index: 100;
+            justify-content: center; align-items: center; flex-direction: column;
         }
 
-        #victory-box {
-            background: white;
-            color: #333;
-            padding: 40px;
-            border-radius: 20px;
-            text-align: center;
-            border: 5px solid var(--primary-color);
-            transform: scale(0);
-            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        #win-box {
+            background: white; padding: 40px; border-radius: 30px;
+            text-align: center; border: 8px solid var(--primary-color);
         }
-
-        #victory-box.show { transform: scale(1); }
-        h1 { color: #e91e63; font-size: 2.5rem; }
 
         .confetti {
-            position: absolute;
-            width: 10px; height: 10px;
+            position: absolute; width: 10px; height: 10px;
             animation: fall 3s linear infinite;
         }
 
-        @keyframes fall {
-            to { transform: translateY(100vh) rotate(360deg); }
-        }
+        @keyframes fall { to { transform: translateY(100vh) rotate(360deg); } }
     </style>
 </head>
 <body>
 
-    <div id="quiz-container">
-        <div id="question">准备中...</div>
-        <div id="options">
-            <div class="option-item" id="optA">A: </div>
-            <div class="option-item" id="optB">B: </div>
-            <div class="option-item" id="optC">C: </div>
-            <div class="option-item" id="optD">D: </div>
+    <!-- 必须点击后才能播放音乐（浏览器安全策略） -->
+    <div id="start-overlay">
+        <button id="start-btn" onclick="startGame()">点击开始游戏 (开启音乐) 🎵</button>
+    </div>
+
+    <div id="header">
+        <div id="question-text">准备挑战历史了吗？</div>
+        <div id="options-grid">
+            <div class="option-box" id="oA">A: </div>
+            <div class="option-box" id="oB">B: </div>
+            <div class="option-box" id="oC">C: </div>
+            <div class="option-box" id="oD">D: </div>
         </div>
     </div>
 
-    <div id="stats">
-        <span>题目: <span id="progress">1</span>/5</span>
-        <span id="lives">生命值: ❤️❤️❤️</span>
+    <div id="info-bar">
+        <span>关卡: <span id="curQ">1</span> / 5</span>
+        <span id="hearts">❤️❤️❤️</span>
     </div>
 
-    <div id="game-area">
-        <canvas id="gameCanvas" width="400" height="400"></canvas>
-    </div>
+    <canvas id="gameCanvas" width="400" height="400"></canvas>
 
-    <div id="overlay">
-        <div id="victory-box">
-            <h1>恭喜你！</h1>
-            <p style="font-size: 1.5rem; margin: 20px 0;">你就是蛇王！🐍👑</p>
-            <button onclick="location.reload()" style="padding: 10px 20px; font-size: 1rem; cursor:pointer; background: #4CAF50; color: white; border: none; border-radius: 5px;">重新开始</button>
+    <div id="win-overlay">
+        <div id="win-box">
+            <h1 style="color: #ff914d; font-size: 2.5rem; margin: 0;">恭喜你！</h1>
+            <h2 style="color: #333;">你就是蛇王！🐍👑</h2>
+            <p>Sejarah 难不倒你！</p>
+            <button onclick="location.reload()" style="background:#4CAF50; color:white; border:none; padding:10px 20px; border-radius:10px; cursor:pointer;">重新开始</button>
         </div>
     </div>
 
 <script>
+    // --- 音频引擎 (Web Audio API) ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    function playTone(freq, type, duration, volume = 0.1) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+    }
+
+    // 各种音效
+    const soundEffect = {
+        correct: () => {
+            playTone(523.25, 'triangle', 0.3); // C5
+            setTimeout(() => playTone(659.25, 'triangle', 0.3), 100); // E5
+        },
+        wrong: () => {
+            playTone(200, 'sawtooth', 0.4, 0.2);
+            playTone(150, 'sawtooth', 0.4, 0.2);
+        },
+        move: () => playTone(150, 'sine', 0.05, 0.05),
+        win: () => {
+            const notes = [523, 659, 783, 1046];
+            notes.forEach((n, i) => setTimeout(() => playTone(n, 'square', 0.5), i * 150));
+        }
+    };
+
+    // 背景音乐合成器
+    let bgmInterval;
+    function startBGM() {
+        const melody = [261, 329, 392, 329, 261, 329, 392, 440]; // 欢快的循环
+        let step = 0;
+        bgmInterval = setInterval(() => {
+            if(!isPaused) playTone(melody[step % melody.length], 'sine', 0.4, 0.03);
+            step++;
+        }, 400);
+    }
+
+    // --- 游戏逻辑 ---
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const grid = 20;
     
-    const questions = [
-        {}, 
-        { q: "1. 谁是马六甲王朝的开国君主？", options: {A:"苏丹满速沙", B:"拜里米苏拉", C:"苏丹阿都沙", D:"敦霹雳"}, ans: "B" },
-        { q: "2. 以下哪个是古代马来群岛最早的文明王国？", options: {A:"室利佛逝王国", B:"满者伯夷王国", C:"狼牙修王国", D:"三佛齐王国"}, ans: "C" },
-        { q: "3. 马六甲王朝能够繁荣的主要原因是什么？", options: {A:"盛产黄金", B:"地理位置位于海上贸易要道", C:"土地肥沃适合农耕", D:"拥有大量金矿"}, ans: "B" },
-        { q: "4. 在马来传统社会中，人民主要的经济活动是什么？", options: {A:"工业制造", B:"航海与贸易", C:"种植与捕鱼", D:"开采石油"}, ans: "C" },
-        { q: "5. 敦霹雳在马六甲王朝担任什么重要职位？", options: {A:"苏丹", B:"宰相", C:"海军司令", D:"宗教长老"}, ans: "B" }
+    const quizData = [
+        { q: "谁是马六甲王朝的开国君主？", a:"苏丹满速沙", b:"拜里米苏拉", c:"苏丹阿都沙", d:"敦霹雳", ans: "B" },
+        { q: "以下哪个是古代马来群岛最早的文明王国？", a:"室利佛逝王国", b:"满者伯夷王国", c:"狼牙修王国", d:"三佛齐王国", ans: "C" },
+        { q: "马六甲王朝能够繁荣的主要原因是什么？", a:"盛产黄金", b:"地理位置位于贸易要道", c:"土地肥沃适合农耕", d:"拥有大量金矿", ans: "B" },
+        { q: "在马来传统社会中，人民主要的经济活动是什么？", a:"工业制造", b:"航海与贸易", c:"种植与捕鱼", d:"开采石油", ans: "C" },
+        { q: "敦霹雳在马六甲王朝担任什么重要职位？", a:"苏丹", b:"宰相", c:"海军司令", d:"宗教长老", ans: "B" }
     ];
 
-    let currentQ = 1;
-    let lives = 3;
-    let snake = [{x: 10 * grid, y: 10 * grid}, {x: 9 * grid, y: 10 * grid}];
-    let dx = grid;
-    let dy = 0;
-    let foods = [];
-    let gameRunning = true;
+    let currentIdx = 0, hearts = 3, isPaused = true;
+    let snake = [{x: 10*grid, y: 10*grid}, {x: 9*grid, y: 10*grid}];
+    let dx = grid, dy = 0, foods = [];
 
-    function updateQuiz() {
-        if (currentQ > 5) {
-            showVictory();
-            return;
-        }
-        const data = questions[currentQ];
-        document.getElementById('question').innerText = data.q;
-        document.getElementById('optA').innerText = "A: " + data.options.A;
-        document.getElementById('optB').innerText = "B: " + data.options.B;
-        document.getElementById('optC').innerText = "C: " + data.options.C;
-        document.getElementById('optD').innerText = "D: " + data.options.D;
-        document.getElementById('progress').innerText = currentQ;
+    function startGame() {
+        document.getElementById('start-overlay').style.display = 'none';
+        isPaused = false;
+        audioCtx.resume();
+        startBGM();
+        initQuiz();
+        setInterval(gameLoop, 160);
+    }
+
+    function initQuiz() {
+        const data = quizData[currentIdx];
+        document.getElementById('question-text').innerText = data.q;
+        document.getElementById('oA').innerText = "A: " + data.a;
+        document.getElementById('oB').innerText = "B: " + data.b;
+        document.getElementById('oC').innerText = "C: " + data.c;
+        document.getElementById('oD').innerText = "D: " + data.d;
+        document.getElementById('curQ').innerText = currentIdx + 1;
         spawnFoods();
     }
 
     function spawnFoods() {
         foods = [];
-        const labels = ['A', 'B', 'C', 'D'];
-        labels.forEach(label => {
-            let newPos;
-            while (true) {
-                newPos = {
-                    x: Math.floor(Math.random() * (canvas.width / grid)) * grid,
-                    y: Math.floor(Math.random() * (canvas.height / grid)) * grid,
-                    label: label
-                };
-                const onSnake = snake.some(s => s.x === newPos.x && s.y === newPos.y);
-                const onFood = foods.some(f => f.x === newPos.x && f.y === newPos.y);
-                if (!onSnake && !onFood) break;
+        ['A', 'B', 'C', 'D'].forEach(label => {
+            let pos;
+            while(true) {
+                pos = { x: Math.floor(Math.random()*20)*grid, y: Math.floor(Math.random()*20)*grid, label: label };
+                if(!snake.some(s=>s.x===pos.x && s.y===pos.y) && !foods.some(f=>f.x===pos.x)) break;
             }
-            foods.push(newPos);
+            foods.push(pos);
         });
     }
 
-    function draw() {
-        if (!gameRunning) return;
+    function gameLoop() {
+        if(isPaused) return;
 
-        // 计算新头部位置
-        let nextX = snake[0].x + dx;
-        let nextY = snake[0].y + dy;
+        let headX = snake[0].x + dx, headY = snake[0].y + dy;
+        if (headX < 0) headX = canvas.width - grid; else if (headX >= canvas.width) headX = 0;
+        if (headY < 0) headY = canvas.height - grid; else if (headY >= canvas.height) headY = 0;
 
-        // 【核心修改：穿墙逻辑】
-        if (nextX < 0) nextX = canvas.width - grid;
-        else if (nextX >= canvas.width) nextX = 0;
-        
-        if (nextY < 0) nextY = canvas.height - grid;
-        else if (nextY >= canvas.height) nextY = 0;
-
-        const head = {x: nextX, y: nextY};
-        
-        // 只有撞到自己才会死
-        if (snake.some(s => s.x === head.x && s.y === head.y)) {
-            gameOver("小心！不要撞到自己的身体！");
-            return;
+        const newHead = {x: headX, y: headY};
+        if(snake.some(s => s.x === newHead.x && s.y === newHead.y)) {
+            snake = [newHead, {x: newHead.x-dx, y: newHead.y-dy}];
         }
-
-        snake.unshift(head);
+        snake.unshift(newHead);
 
         let ate = false;
-        foods.forEach((food) => {
-            if (head.x === food.x && head.y === food.y) {
+        foods.forEach(f => {
+            if(newHead.x === f.x && newHead.y === f.y) {
                 ate = true;
-                handleEating(food.label);
+                if(f.label === quizData[currentIdx].ans) {
+                    soundEffect.correct();
+                    currentIdx++;
+                    if(currentIdx >= 5) win(); else initQuiz();
+                } else {
+                    soundEffect.wrong();
+                    hearts--;
+                    updateHearts();
+                    if(hearts <= 0) { alert("Game Over!"); location.reload(); }
+                    else { alert("答错了！扣一颗心 ❤️"); snake.pop(); spawnFoods(); }
+                }
             }
         });
+        if(!ate) snake.pop();
+        render();
+    }
 
-        if (!ate) snake.pop();
-
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // 画网格
-        ctx.strokeStyle = "#f0f0f0";
-        for(let i=0; i<=canvas.width; i+=grid) {
-            ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,canvas.height); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(canvas.width,i); ctx.stroke();
-        }
-
-        // 画食物 (颜色统一)
-        foods.forEach(food => {
-            ctx.fillStyle = "#3498db";
-            ctx.beginPath();
-            ctx.roundRect(food.x+2, food.y+2, grid-4, grid-4, 4);
-            ctx.fill();
-            ctx.fillStyle = "white";
-            ctx.font = "bold 14px Arial";
-            ctx.textAlign = "center";
-            ctx.fillText(food.label, food.x + grid/2, food.y + 15);
+    function render() {
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        ctx.strokeStyle = "#eee";
+        for(let i=0; i<400; i+=20) { ctx.strokeRect(i, 0, 0.5, 400); ctx.strokeRect(0, i, 400, 0.5); }
+        foods.forEach(f => {
+            ctx.fillStyle = varColor('--food-color');
+            ctx.beginPath(); ctx.roundRect(f.x+2, f.y+2, 16, 16, 4); ctx.fill();
+            ctx.fillStyle = "white"; ctx.font = "bold 12px Arial"; ctx.textAlign="center";
+            ctx.fillText(f.label, f.x+10, f.y+14);
         });
-
-        // 画蛇
-        snake.forEach((part, i) => {
-            ctx.fillStyle = i === 0 ? "#2E7D32" : "#81C784";
-            ctx.beginPath();
-            ctx.roundRect(part.x+1, part.y+1, grid-2, grid-2, 4);
-            ctx.fill();
+        snake.forEach((p, i) => {
+            ctx.fillStyle = (i===0) ? "#2E7D32" : "#81C784";
+            ctx.beginPath(); ctx.roundRect(p.x+1, p.y+1, 18, 18, 4); ctx.fill();
         });
     }
 
-    function handleEating(label) {
-        if (label === questions[currentQ].ans) {
-            currentQ++;
-            if (currentQ <= 5) {
-                updateQuiz();
-            } else {
-                showVictory();
-            }
-        } else {
-            lives--;
-            updateLivesUI();
-            if (lives <= 0) {
-                gameOver("生命值用光了！");
-            } else {
-                alert("答错了！那是错误答案。请再想一想！");
-                snake.pop(); // 吃错不长身体
-                spawnFoods(); 
-            }
-        }
-    }
+    function varColor(name) { return getComputedStyle(document.documentElement).getPropertyValue(name); }
+    function updateHearts() { document.getElementById('hearts').innerText = "❤️".repeat(hearts); }
 
-    function updateLivesUI() {
-        document.getElementById('lives').innerText = "生命值: " + "❤️".repeat(lives);
-    }
-
-    function gameOver(msg) {
-        gameRunning = false;
-        alert(msg);
-        location.reload();
-    }
-
-    function showVictory() {
-        gameRunning = false;
-        const overlay = document.getElementById('overlay');
-        overlay.style.display = 'flex';
-        setTimeout(() => {
-            document.getElementById('victory-box').classList.add('show');
-            createConfetti();
-        }, 100);
-    }
-
-    function createConfetti() {
-        const colors = ['#f1c40f', '#e74c3c', '#9b59b6', '#2ecc71', '#3498db'];
+    function win() {
+        isPaused = true;
+        clearInterval(bgmInterval);
+        soundEffect.win();
+        document.getElementById('win-overlay').style.display = 'flex';
         for(let i=0; i<80; i++) {
             const c = document.createElement('div');
             c.className = 'confetti';
-            c.style.left = Math.random() * 100 + 'vw';
-            c.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-            c.style.animationDelay = Math.random() * 3 + 's';
-            document.getElementById('overlay').appendChild(c);
+            c.style.left = Math.random()*100 + 'vw';
+            c.style.backgroundColor = `hsl(${Math.random()*360}, 70%, 60%)`;
+            c.style.animationDelay = Math.random()*2 + 's';
+            document.body.appendChild(c);
         }
     }
 
     window.addEventListener('keydown', e => {
-        switch(e.key) {
-            case 'ArrowUp': if (dy === 0) { dx = 0; dy = -grid; } break;
-            case 'ArrowDown': if (dy === 0) { dx = 0; dy = grid; } break;
-            case 'ArrowLeft': if (dx === 0) { dx = -grid; dy = 0; } break;
-            case 'ArrowRight': if (dx === 0) { dx = grid; dy = 0; } break;
-        }
+        if(isPaused) return;
+        soundEffect.move();
+        if(e.key === 'ArrowUp' && dy === 0) { dx = 0; dy = -grid; }
+        else if(e.key === 'ArrowDown' && dy === 0) { dx = 0; dy = grid; }
+        else if(e.key === 'ArrowLeft' && dx === 0) { dx = -grid; dy = 0; }
+        else if(e.key === 'ArrowRight' && dx === 0) { dx = grid; dy = 0; }
     });
-
-    updateQuiz();
-    setInterval(draw, 140); // 稍微加快了一点点流畅度
 </script>
 </body>
 </html>
